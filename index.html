@@ -15,11 +15,8 @@
     
     <style>
       body { margin: 0; overflow: hidden; height: 100vh; background-color: #000; }
-      
-      /* MindAR varsayılan arayüzlerini tamamen gizle */
       .mindar-ui-overlay { display: none !important; }
 
-      /* Senin eklediğin Başlangıç Ekranı */
       #click-screen {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         background-color: darkblue; color: white; display: flex;
@@ -31,11 +28,9 @@
         text-align: center; font-size: 24px;
       }
 
-      /* Bizim eklediğimiz Tarayıcı Vizörü (Başlangıçta gizli) */
       #scanning-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        display: none; /* İlk ekrana tıklanana kadar gizli durur */
-        align-items: center; justify-content: center;
+        display: none; align-items: center; justify-content: center;
         z-index: 999; pointer-events: none; 
       }
       .scanner-frame {
@@ -43,7 +38,6 @@
         border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 20px;
         box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); position: relative;
       }
-      /* Vizörün köşe tasarımları */
       .scanner-frame::before {
         content: ""; position: absolute; top: -5px; left: -5px; width: 40px; height: 40px;
         border-top: 5px solid #00fff2; border-left: 5px solid #00fff2;
@@ -52,7 +46,6 @@
         content: ""; position: absolute; bottom: -5px; right: -5px; width: 40px; height: 40px;
         border-bottom: 5px solid #00fff2; border-right: 5px solid #00fff2;
       }
-      /* Aşağı yukarı giden tarama çizgisi */
       .scanner-line {
         position: absolute; width: 100%; height: 2px;
         background: #00fff2; opacity: 0.7; box-shadow: 0 0 10px #00fff2;
@@ -65,34 +58,28 @@
     </style>
 
     <script>
-      // 3D Model ve Tarayıcı Vizörü Yöneticisi
       AFRAME.registerComponent('ar-handler', {
         init: function () {
           const scanner = document.querySelector('#scanning-overlay');
           
-          // Kamera hedefi bulduğunda tarayıcı çizgilerini gizle
           this.el.addEventListener('targetFound', () => {
             scanner.style.display = 'none';
           });
           
-          // Kamera hedeften çıkınca tarayıcıyı tekrar göster
           this.el.addEventListener('targetLost', () => {
             scanner.style.display = 'flex';
           });
         }
       });
 
-      // İlk tıklama ekranı kontrolleri
       document.addEventListener("DOMContentLoaded", function() {
         const clickScreen = document.querySelector('#click-screen');
         const scanner = document.querySelector('#scanning-overlay');
 
         clickScreen.addEventListener('click', function() {
-          // Başlangıç ekranını yavaşça kaybet
           clickScreen.style.opacity = '0';
           setTimeout(() => { 
             clickScreen.style.display = 'none'; 
-            // Başlangıç ekranı gidince tarayıcıyı aktif et
             scanner.style.display = 'flex';
           }, 500);
         });
