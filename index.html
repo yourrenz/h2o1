@@ -1,19 +1,119 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta charset="utf-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <title>H2O AR Projesi</title>
+    
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     
     <style>
-      body { margin: 0; overflow: hidden; }
+      body { margin: 0; overflow: hidden; height: 100vh; background-color: #000; }
+      
+      /* MindAR varsayılan arayüzlerini tamamen gizle */
+      .mindar-ui-overlay { display: none !important; }
+
+      /* Senin eklediğin Başlangıç Ekranı */
+      #click-screen {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: darkblue; color: white; display: flex;
+        align-items: center; justify-content: center; z-index: 10000; 
+        font-family: sans-serif; cursor: pointer; transition: opacity 0.5s; 
+      }
+      #click-screen h1 {
+        border: 4px solid white; padding: 20px 40px; border-radius: 20px;
+        text-align: center; font-size: 24px;
+      }
+
+      /* Bizim eklediğimiz Tarayıcı Vizörü (Başlangıçta gizli) */
+      #scanning-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        display: none; /* İlk ekrana tıklanana kadar gizli durur */
+        align-items: center; justify-content: center;
+        z-index: 999; pointer-events: none; 
+      }
+      .scanner-frame {
+        width: 70vw; height: 70vw; max-width: 300px; max-height: 300px;
+        border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 20px;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); position: relative;
+      }
+      /* Vizörün köşe tasarımları */
+      .scanner-frame::before {
+        content: ""; position: absolute; top: -5px; left: -5px; width: 40px; height: 40px;
+        border-top: 5px solid #00fff2; border-left: 5px solid #00fff2;
+      }
+      .scanner-frame::after {
+        content: ""; position: absolute; bottom: -5px; right: -5px; width: 40px; height: 40px;
+        border-bottom: 5px solid #00fff2; border-right: 5px solid #00fff2;
+      }
+      /* Aşağı yukarı giden tarama çizgisi */
+      .scanner-line {
+        position: absolute; width: 100%; height: 2px;
+        background: #00fff2; opacity: 0.7; box-shadow: 0 0 10px #00fff2;
+        animation: scan 2s linear infinite;
+      }
+      @keyframes scan {
+        0% { top: 0; }
+        100% { top: 100%; }
+      }
     </style>
+
+    <script>
+      // 3D Model ve Tarayıcı Vizörü Yöneticisi
+      AFRAME.registerComponent('ar-handler', {
+        init: function () {
+          const scanner = document.querySelector('#scanning-overlay');
+          
+          // Kamera hedefi bulduğunda tarayıcı çizgilerini gizle
+          this.el.addEventListener('targetFound', () => {
+            scanner.style.display = 'none';
+          });
+          
+          // Kamera hedeften çıkınca tarayıcıyı tekrar göster
+          this.el.addEventListener('targetLost', () => {
+            scanner.style.display = 'flex';
+          });
+        }
+      });
+
+      // İlk tıklama ekranı kontrolleri
+      document.addEventListener("DOMContentLoaded", function() {
+        const clickScreen = document.querySelector('#click-screen');
+        const scanner = document.querySelector('#scanning-overlay');
+
+        clickScreen.addEventListener('click', function() {
+          // Başlangıç ekranını yavaşça kaybet
+          clickScreen.style.opacity = '0';
+          setTimeout(() => { 
+            clickScreen.style.display = 'none'; 
+            // Başlangıç ekranı gidince tarayıcıyı aktif et
+            scanner.style.display = 'flex';
+          }, 500);
+        });
+      });
+    </script>
   </head>
   
   <body>
+
+    <div id="click-screen">
+      <h1>BAŞLATMAK İÇİN <br> EKRANA DOKUN</h1>
+    </div>
+
+    <div id="scanning-overlay">
+      <div class="scanner-frame">
+        <div class="scanner-line"></div>
+      </div>
+    </div>
+
     <a-scene 
-      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.001; filterBeta: 0.01;" 
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no;" 
       color-space="sRGB" 
       renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
@@ -25,7 +125,7 @@
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-entity mindar-image-target="targetIndex: 0">
+      <a-entity mindar-image-target="targetIndex: 0" ar-handler>
         <a-gltf-model 
           src="#h2oModel" 
           rotation="0 0 0" 
@@ -36,5 +136,6 @@
       </a-entity>
       
     </a-scene>
+
   </body>
 </html>
