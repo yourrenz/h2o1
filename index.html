@@ -3,33 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>H2O Sentezi: Sembollü Model</title>
+    <title>H2O Sentezi: Topcukların Üzerinde Harfler</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #050510; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #050510; font-family: sans-serif; }
         canvas { display: block; }
         #ui {
             position: absolute; bottom: 30px; width: 100%; text-align: center;
-            color: white; pointer-events: none;
+            color: white; pointer-events: none; text-shadow: 1px 1px 3px black;
         }
         button {
             pointer-events: auto; padding: 12px 25px; cursor: pointer;
             background: #1a73e8; color: white; border: none; border-radius: 25px;
-            font-weight: bold; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-weight: bold; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
-        button:hover { background: #1557b0; transform: scale(1.05); }
+        button:hover { background: #1557b0; }
     </style>
 </head>
 <body>
 
     <div id="ui">
-        <button onclick="resetSimulation()">Sentezi Başlat / Sıfırla</button>
+        <h2 id="status">Sentez Bekleniyor...</h2>
+        <button onclick="resetSimulation()">Sentezi Yeniden Başlat</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
         let scene, camera, renderer, oxygen, h1, h2, bond1, bond2;
-        let labelO, labelH1, labelH2;
         let isMerged = false;
         const targetAngle = (104.5 * Math.PI) / 180;
         const bondLength = 1.6;
@@ -47,63 +47,82 @@
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            const light = new THREE.PointLight(0xffffff, 1.2, 100);
+            const light = new THREE.PointLight(0xffffff, 1.5, 100);
             light.position.set(10, 10, 10);
             scene.add(light);
-            scene.add(new THREE.AmbientLight(0x606060));
+            scene.add(new THREE.AmbientLight(0x505050));
 
-            // Atomlar
-            oxygen = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
-            h1 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-            h2 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-            
-            scene.add(oxygen, h1, h2);
+            // --- YENİ BÖLÜM: DOKULARI (HARFLERİ) OLUŞTURMA ---
 
-            // Bağlar
+            // Oksijen Dokusu (Kırmızı üzerine Beyaz O)
+            const oTexture = createAtomTexture("O", "#ff0000", "#ffffff");
+            // Hidrojen Dokusu (Beyaz üzerine Siyah H)
+            const hTexture = createAtomTexture("H", "#ffffff", "#000000");
+
+            // --- ATOM GEOMETRİ VE MATERYALLERİ ---
+
+            const oMat = new THREE.MeshStandardMaterial({ 
+                map: oTexture, // Dokuyu buraya uyguluyoruz
+                roughness: 0.3
+            });
+            oxygen = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), oMat);
+            scene.add(oxygen);
+
+            const hMat = new THREE.MeshStandardMaterial({ 
+                map: hTexture, // Dokuyu buraya uyguluyoruz
+                roughness: 0.3
+            });
+            h1 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), hMat);
+            h2 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), hMat);
+            scene.add(h1, h2);
+
+            // Bağlar (Kürelerin rengiyle uyumlu olması için açık gri)
             const bondGeo = new THREE.CylinderGeometry(0.1, 0.1, bondLength, 12);
-            const bondMat = new THREE.MeshStandardMaterial({ color: 0xdddddd });
+            const bondMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
             bond1 = new THREE.Mesh(bondGeo, bondMat);
             bond2 = new THREE.Mesh(bondGeo, bondMat);
             bond1.visible = bond2.visible = false;
             scene.add(bond1, bond2);
 
-            // Etiketleri Oluştur (O ve H harfleri)
-            labelO = createTextLabel("O", "#ffffff");
-            labelH1 = createTextLabel("H", "#333333");
-            labelH2 = createTextLabel("H", "#333333");
-            
             resetSimulation();
         }
 
-        // Harf Etiketi Oluşturma Fonksiyonu (Canvas tabanlı Sprite)
-        function createTextLabel(text, color) {
+        // Küre yüzeyine sarılacak harfli dokuyu oluşturan fonksiyon
+        function createAtomTexture(text, bgColor, textColor) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 128;
-            canvas.height = 128;
-            ctx.fillStyle = color;
-            ctx.font = "Bold 100px Arial";
+            canvas.width = 256;
+            canvas.height = 256;
+
+            // Arka plan rengi (Kürenin temel rengi)
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Harf (Kürenin ortasına)
+            ctx.fillStyle = textColor;
+            ctx.font = "Bold 160px Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(text, 64, 64);
+            ctx.fillText(text, 128, 128);
 
-            const texture = new THREE.CanvasTexture(canvas);
-            const spriteMat = new THREE.SpriteMaterial({ map: texture });
-            const sprite = new THREE.Sprite(spriteMat);
-            sprite.scale.set(1, 1, 1);
-            sprite.visible = false; // Başlangıçta gizli
-            scene.add(sprite);
-            return sprite;
+            return new THREE.CanvasTexture(canvas);
         }
 
         function resetSimulation() {
             isMerged = false;
+            document.getElementById('status').innerText = "Moleküller Birleşiyor...";
+            
             oxygen.position.set(0, -6, 0);
             h1.position.set(-10, 0, 0);
             h2.position.set(10, 0, 0);
             
+            // Atomları harfler kameraya bakacak şekilde döndür
+            // Three.js dokuyu kürenin arkasına sarar, bu yüzden 180 derece (PI) döndürmeliyiz
+            oxygen.rotation.y = Math.PI; 
+            h1.rotation.y = Math.PI;
+            h2.rotation.y = Math.PI;
+
             bond1.visible = bond2.visible = false;
-            labelO.visible = labelH1.visible = labelH2.visible = false;
             scene.rotation.y = 0;
         }
 
@@ -111,7 +130,6 @@
             requestAnimationFrame(animate);
 
             if (!isMerged) {
-                // Hareketler
                 oxygen.position.lerp(new THREE.Vector3(0, 1, 0), 0.03);
                 
                 const h1Target = new THREE.Vector3(Math.sin(targetAngle / 2) * -bondLength, 1 - Math.cos(targetAngle / 2) * bondLength, 0);
@@ -120,21 +138,16 @@
                 h1.position.lerp(h1Target, 0.04);
                 h2.position.lerp(h2Target, 0.04);
 
-                // Birleşme kontrolü ve etiketlerin belirmesi
                 if (h1.position.distanceTo(h1Target) < 0.05) {
                     isMerged = true;
                     bond1.visible = bond2.visible = true;
-                    labelO.visible = labelH1.visible = labelH2.visible = true;
                     updateBonds();
+                    document.getElementById('status').innerText = "H2O Sentezi Tamamlandı!";
                 }
             } else {
+                // Kararlı haldeyken molekülün tamamı dönerken harfler de üzerinde döner
                 scene.rotation.y += 0.005;
             }
-
-            // Etiketleri atomların üzerine sabitle
-            labelO.position.set(oxygen.position.x, oxygen.position.y + 1.2, oxygen.position.z);
-            labelH1.position.set(h1.position.x, h1.position.y - 0.8, h1.position.z);
-            labelH2.position.set(h2.position.x, h2.position.y - 0.8, h2.position.z);
 
             renderer.render(scene, camera);
         }
