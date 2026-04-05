@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>H2O Sentezi: Sembollü Model</title>
+    <title>H2O Sentezi: Kimya Arka Planlı</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #050510; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         canvas { display: block; }
@@ -34,6 +34,10 @@
         const targetAngle = (104.5 * Math.PI) / 180;
         const bondLength = 1.6;
 
+        // Arka Plan ve Efektler
+        let backgroundMesh;
+        let particlesSystem;
+
         init();
         animate();
 
@@ -52,23 +56,19 @@
             scene.add(light);
             scene.add(new THREE.AmbientLight(0x606060));
 
-            // --- YENİ BÖLÜM: ARKA PLAN KİMYA ÇIKARTMALARI ---
-            // Yükleme yöneticisi (opsiyonel, yükleme durumunu takip etmek için)
-            const manager = new THREE.LoadingManager();
-            manager.onLoad = function () {
-                console.log('Arka plan dokusu yüklendi.');
-            };
-
-            const textureLoader = new THREE.TextureLoader(manager);
+            // --- KİMYA ARKA PLANI (ÇIKARTMALAR) ---
+            const textureLoader = new THREE.TextureLoader();
             
             // DİKKAT: Buraya kendi kimya temalı arka plan görselinin yolunu koymalısın.
-            // Örnek: 'images/chemistry_stickers_bg.jpg' veya bir URL.
+            // Örnek: 'images/chemistry_stickers_bg.jpg'
             // Stabilite için görsel boyutu optimize edilmiş (örn. 1920x1080) olmalıdır.
-            const bgTexture = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/uv_grid_opengl.jpg'); // Örnek test dokusu
-
-            // Dokunun sahne arka planına atanması
-            scene.background = bgTexture;
-            // --------------------------------------------------
+            const bgTexture = textureLoader.load('https://threejs.org/examples/textures/uv_grid_opengl.jpg'); // Test dokusu
+            
+            const bgGeometry = new THREE.PlaneGeometry(20, 15);
+            const bgMaterial = new THREE.MeshBasicMaterial({ map: bgTexture, side: THREE.DoubleSide, transparent: true, opacity: 0.2 });
+            backgroundMesh = new THREE.Mesh(bgGeometry, bgMaterial);
+            backgroundMesh.position.z = -5; // Molekülün arkasına yerleştir
+            scene.add(backgroundMesh);
 
             // Atomlar
             oxygen = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
@@ -90,6 +90,9 @@
             labelH1 = createTextLabel("H", "#333333");
             labelH2 = createTextLabel("H", "#333333");
             
+            // --- KİMYASAL PARÇACIK EFEKTİ (Sentez Sonrası) ---
+            createChemistryParticles();
+
             resetSimulation();
         }
 
@@ -114,6 +117,33 @@
             return sprite;
         }
 
+        // Soyut Kimyasal Sembollerden Parçacık Sistemi Oluşturma
+        function createChemistryParticles() {
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 50; // Stabilite için az sayıda tutuldu
+            const posArray = new Float32Array(particlesCount * 3);
+
+            for (let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 20; // Geniş bir alana yay
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+            // Parçacık materyali olarak soyut bir doku veya renk kullanılabilir.
+            // Şimdilik basit nokta materyali.
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.1,
+                color: 0x00aaff, // Su rengi tonlarında plazma etkisi
+                transparent: true,
+                opacity: 0, // Başlangıçta gizli
+                blending: THREE.AdditiveBlending // Işıma etkisi
+            });
+
+            particlesSystem = new THREE.Points(particlesGeometry, particlesMaterial);
+            particlesSystem.position.z = -2; // Arka plan ile molekül arasında
+            scene.add(particlesSystem);
+        }
+
         function resetSimulation() {
             isMerged = false;
             oxygen.position.set(0, -6, 0);
@@ -123,6 +153,9 @@
             bond1.visible = bond2.visible = false;
             labelO.visible = labelH1.visible = labelH2.visible = false;
             scene.rotation.y = 0;
+
+            // Parçacıkları gizle
+            particlesSystem.material.opacity = 0;
         }
 
         function animate() {
@@ -144,9 +177,17 @@
                     bond1.visible = bond2.visible = true;
                     labelO.visible = labelH1.visible = labelH2.visible = true;
                     updateBonds();
+                    
+                    // Sentez sonrası parçacıkları yavaşça göster (Fade-in)
+                    new THREE.Euler().setFromQuaternion(particlesSystem.quaternion); // Dummy call for opacity animation
                 }
             } else {
                 scene.rotation.y += 0.005;
+
+                // Sentez sonrası parçacık efekti animasyonu
+                particlesSystem.material.opacity = THREE.MathUtils.lerp(particlesSystem.material.opacity, 0.5, 0.01); // Maksimum 0.5 opaklık
+                particlesSystem.rotation.y += 0.001; // Yavaşça dön
+                particlesSystem.position.y = Math.sin(Date.now() * 0.001) * 0.2; // Hafif süzülme
             }
 
             // Etiketleri atomların üzerine sabitle
