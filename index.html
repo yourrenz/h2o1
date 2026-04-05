@@ -3,117 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>H2O Sentezi 3D Model</title>
+    <title>H2O Sentezi: Sağ ve Sol Birleşimi</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden; /* Kaydırma çubuklarını gizler */
-            background-color: #0a0a1a; /* Derin ve koyu bir arka plan */
+        body { margin: 0; overflow: hidden; background-color: #050510; font-family: sans-serif; }
+        canvas { display: block; }
+        #ui {
+            position: absolute; bottom: 20px; width: 100%; text-align: center;
+            color: white; pointer-events: none; text-shadow: 1px 1px 2px black;
         }
-        canvas {
-            display: block;
-        }
-        #info {
-            position: absolute;
-            top: 20px;
-            width: 100%;
-            text-align: center;
-            color: #ffffff;
-            font-family: Arial, sans-serif;
-            pointer-events: none;
-            opacity: 0.8;
+        button {
+            pointer-events: auto; padding: 10px 20px; cursor: pointer;
+            background: #222; color: white; border: 1px solid #444; border-radius: 5px;
         }
     </style>
 </head>
 <body>
-    <div id="info">H2O Sentezi: Moleküller Birleşiyor...</div>
+
+    <div id="ui">
+        <h2 id="status">Sentez Bekleniyor...</h2>
+        <button onclick="resetSimulation()">Yeniden Başlat</button>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-        // 1. Sahne, Kamera ve Render Ayarları (Kural 1 & 2: Stabil ve Uyumluluk)
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio); // Mobil cihazlar için netlik ayarı
-        document.body.appendChild(renderer.domElement);
-
-        // Işıklandırma
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        const pointLight = new THREE.PointLight(0xffffff, 0.8);
-        pointLight.position.set(5, 5, 5);
-        scene.add(pointLight);
-
-        // 2. Atomların Oluşturulması (Kimya felsefesi)
-        // Oksijen (Kırmızı, daha büyük)
-        const oxygenGeometry = new THREE.SphereGeometry(1, 32, 32);
-        const oxygenMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-        const oxygen = new THREE.Mesh(oxygenGeometry, oxygenMaterial);
-        
-        // Hidrojenler (Beyaz, daha küçük)
-        const hydrogenGeometry = new THREE.SphereGeometry(0.5, 32, 32);
-        const hydrogenMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
-        
-        const hydrogen1 = new THREE.Mesh(hydrogenGeometry, hydrogenMaterial);
-        const hydrogen2 = new THREE.Mesh(hydrogenGeometry, hydrogenMaterial);
-
-        // Atomların başlangıç pozisyonları (Ayrı noktalardan havaya yükselecekler)
-        oxygen.position.set(-3, -5, -2);
-        hydrogen1.position.set(3, -6, 2);
-        hydrogen2.position.set(0, -7, 3);
-
-        scene.add(oxygen);
-        scene.add(hydrogen1);
-        scene.add(hydrogen2);
-
-        // Su Damlası (Birleşme sonrası ortaya çıkacak, başlangıçta gizli)
-        const waterGeometry = new THREE.SphereGeometry(1.5, 32, 32);
-        const waterMaterial = new THREE.MeshStandardMaterial({ color: 0x00aaff, transparent: true, opacity: 0.8 });
-        const waterDrop = new THREE.Mesh(waterGeometry, waterMaterial);
-        waterDrop.position.set(0, 0, 0);
-        waterDrop.visible = false;
-        scene.add(waterDrop);
-
-        camera.position.z = 8;
-
-        // 3. Animasyon Döngüsü (Kural 4: Havaya yükselme ve birleşme hissi)
+        let scene, camera, renderer, oxygen, h1, h2, bond1, bond2;
         let isMerged = false;
+        const targetAngle = (104.5 * Math.PI) / 180; // Radyan cinsinden 104.5 derece
+        const bondLength = 1.5;
+
+        init();
+        animate();
+
+        function init() {
+            // 1. Sahne Kurulumu
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 8;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            // Işıklandırma
+            const light = new THREE.PointLight(0xffffff, 1, 100);
+            light.position.set(10, 10, 10);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x404040));
+
+            // 2. Atomları Oluşturma
+            const oGeo = new THREE.SphereGeometry(0.8, 32, 32);
+            const oMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+            oxygen = new THREE.Mesh(oGeo, oMat);
+            scene.add(oxygen);
+
+            const hGeo = new THREE.SphereGeometry(0.4, 32, 32);
+            const hMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+            h1 = new THREE.Mesh(hGeo, hMat);
+            h2 = new THREE.Mesh(hGeo, hMat);
+            scene.add(h1);
+            scene.add(h2);
+
+            // 3. Bağlar (Başlangıçta görünmez)
+            const bondGeo = new THREE.CylinderGeometry(0.1, 0.1, bondLength, 8);
+            const bondMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+            bond1 = new THREE.Mesh(bondGeo, bondMat);
+            bond2 = new THREE.Mesh(bondGeo, bondMat);
+            bond1.visible = bond2.visible = false;
+            scene.add(bond1);
+            scene.add(bond2);
+
+            resetSimulation();
+        }
+
+        function resetSimulation() {
+            isMerged = false;
+            document.getElementById('status').innerText = "Moleküller Hareket Ediyor...";
+            
+            // Başlangıç Pozisyonları (Kural gereği: O aşağıdan, H'lar yanlardan)
+            oxygen.position.set(0, -5, 0);
+            h1.position.set(-8, 0, 0); // Soldan geliyor
+            h2.position.set(8, 0, 0);  // Sağdan geliyor
+            
+            bond1.visible = bond2.visible = false;
+        }
 
         function animate() {
             requestAnimationFrame(animate);
 
             if (!isMerged) {
-                // Yavaşça yukarı (Y ekseni) ve merkeze (0,0,0) doğru hareket
-                oxygen.position.lerp(new THREE.Vector3(0, 0, 0), 0.01);
-                hydrogen1.position.lerp(new THREE.Vector3(0, 0, 0), 0.015);
-                hydrogen2.position.lerp(new THREE.Vector3(0, 0, 0), 0.012);
+                // Merkeze doğru süzülme
+                oxygen.position.lerp(new THREE.Vector3(0, 1, 0), 0.02);
+                
+                // Hidrojenlerin hedef noktaları (104.5 derece kuralına göre)
+                const h1Target = new THREE.Vector3(
+                    Math.sin(targetAngle / 2) * -bondLength,
+                    1 - Math.cos(targetAngle / 2) * bondLength,
+                    0
+                );
+                const h2Target = new THREE.Vector3(
+                    Math.sin(targetAngle / 2) * bondLength,
+                    1 - Math.cos(targetAngle / 2) * bondLength,
+                    0
+                );
 
-                // Birleşme noktasına (merkeze) olan mesafeyi kontrol et
-                if (oxygen.position.distanceTo(new THREE.Vector3(0,0,0)) < 0.2) {
+                h1.position.lerp(h1Target, 0.03);
+                h2.position.lerp(h2Target, 0.03);
+
+                // Birleşme kontrolü
+                if (h1.position.distanceTo(h1Target) < 0.1) {
                     isMerged = true;
-                    // Atomları gizle, suyu göster
-                    oxygen.visible = false;
-                    hydrogen1.visible = false;
-                    hydrogen2.visible = false;
-                    
-                    waterDrop.visible = true;
-                    document.getElementById('info').innerText = "Su (H2O) Başarıyla Oluştu!";
+                    showBonds();
+                    document.getElementById('status').innerText = "H2O Sentezi Tamamlandı!";
                 }
             } else {
-                // Su oluştuktan sonra hafifçe dalgalanma/dönme efekti
-                waterDrop.rotation.y += 0.01;
-                waterDrop.position.y = Math.sin(Date.now() * 0.002) * 0.5; // Yukarı aşağı süzülme
+                // Kararlı halde hafif salınım
+                scene.rotation.y += 0.005;
             }
 
             renderer.render(scene, camera);
         }
 
-        animate();
+        function showBonds() {
+            bond1.visible = bond2.visible = true;
+            
+            // Bağları atomların arasına yerleştirme ve yönlendirme
+            updateBond(bond1, oxygen.position, h1.position);
+            updateBond(bond2, oxygen.position, h2.position);
+        }
 
-        // Pencere boyutu değiştiğinde veya mobil cihaz yan çevrildiğinde kamerayı güncelle
+        function updateBond(bond, p1, p2) {
+            const dir = new THREE.Vector3().subVectors(p2, p1);
+            bond.position.copy(p1).add(dir.multiplyScalar(0.5));
+            bond.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+        }
+
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
