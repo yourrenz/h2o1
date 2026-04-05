@@ -3,37 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>H2O Sentezi - Net Etiketli Model</title>
+    <title>H2O Sentezi: Sembollü Model</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
-        #ui { position: absolute; bottom: 20px; width: 100%; text-align: center; pointer-events: none; }
-        button { pointer-events: auto; padding: 10px 20px; cursor: pointer; border-radius: 20px; border: none; background: #fff; font-weight: bold; }
-        
-        /* Harf Etiketlerinin Stili */
-        .label {
-            color: white;
-            font-family: Arial, sans-serif;
-            font-weight: bold;
-            font-size: 24px;
-            pointer-events: none;
-            user-select: none;
-            text-shadow: 2px 2px 4px rgba(0,0,0,1);
+        body { margin: 0; overflow: hidden; background-color: #050510; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; }
+        #ui {
+            position: absolute; bottom: 30px; width: 100%; text-align: center;
+            color: white; pointer-events: none;
         }
-        .h-label { color: #ccc; font-size: 20px; }
+        button {
+            pointer-events: auto; padding: 12px 25px; cursor: pointer;
+            background: #1a73e8; color: white; border: none; border-radius: 25px;
+            font-weight: bold; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        button:hover { background: #1557b0; transform: scale(1.05); }
     </style>
 </head>
 <body>
 
     <div id="ui">
-        <button onclick="resetSimulation()">Sentezi Yeniden Başlat</button>
+        <button onclick="resetSimulation()">Sentezi Başlat / Sıfırla</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
 
     <script>
-        let scene, camera, renderer, labelRenderer;
-        let oxygen, h1, h2, bond1, bond2;
+        let scene, camera, renderer, oxygen, h1, h2, bond1, bond2;
+        let labelO, labelH1, labelH2;
         let isMerged = false;
         const targetAngle = (104.5 * Math.PI) / 180;
         const bondLength = 1.6;
@@ -44,101 +40,111 @@
         function init() {
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 6;
+            camera.position.z = 8;
 
-            // Standart 3D Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // Harf (Etiket) Renderer
-            labelRenderer = new THREE.CSS2DRenderer();
-            labelRenderer.setSize(window.innerWidth, window.innerHeight);
-            labelRenderer.style.position = 'absolute';
-            labelRenderer.style.top = '0px';
-            document.body.appendChild(labelRenderer.domElement);
-
-            const light = new THREE.PointLight(0xffffff, 1.5, 100);
-            light.position.set(5, 5, 5);
+            const light = new THREE.PointLight(0xffffff, 1.2, 100);
+            light.position.set(10, 10, 10);
             scene.add(light);
-            scene.add(new THREE.AmbientLight(0x404040));
+            scene.add(new THREE.AmbientLight(0x606060));
 
-            // Oksijen
+            // Atomlar
             oxygen = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
-            const oDiv = document.createElement('div');
-            oDiv.className = 'label';
-            oDiv.textContent = 'O';
-            const oLabel = new THREE.CSS2DObject(oDiv);
-            oxygen.add(oLabel); // Harfi atomun tam merkezine bağladık
-            scene.add(oxygen);
-
-            // Hidrojenler
-            const hGeo = new THREE.SphereGeometry(0.45, 32, 32);
-            const hMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            h1 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            h2 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffffff }));
             
-            h1 = new THREE.Mesh(hGeo, hMat);
-            const h1Div = document.createElement('div');
-            h1Div.className = 'label h-label';
-            h1Div.textContent = 'H';
-            h1.add(new THREE.CSS2DObject(h1Div));
-
-            h2 = new THREE.Mesh(hGeo, hMat);
-            const h2Div = document.createElement('div');
-            h2Div.className = 'label h-label';
-            h2Div.textContent = 'H';
-            h2.add(new THREE.CSS2DObject(h2Div));
-
-            scene.add(h1, h2);
+            scene.add(oxygen, h1, h2);
 
             // Bağlar
             const bondGeo = new THREE.CylinderGeometry(0.1, 0.1, bondLength, 12);
-            const bondMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
+            const bondMat = new THREE.MeshStandardMaterial({ color: 0xdddddd });
             bond1 = new THREE.Mesh(bondGeo, bondMat);
             bond2 = new THREE.Mesh(bondGeo, bondMat);
+            bond1.visible = bond2.visible = false;
             scene.add(bond1, bond2);
 
+            // Etiketleri Oluştur (O ve H harfleri)
+            labelO = createTextLabel("O", "#ffffff");
+            labelH1 = createTextLabel("H", "#333333");
+            labelH2 = createTextLabel("H", "#333333");
+            
             resetSimulation();
+        }
+
+        // Harf Etiketi Oluşturma Fonksiyonu (Canvas tabanlı Sprite)
+        function createTextLabel(text, color) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 128;
+            canvas.height = 128;
+            ctx.fillStyle = color;
+            ctx.font = "Bold 100px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(text, 64, 64);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMat = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.scale.set(1, 1, 1);
+            sprite.visible = false; // Başlangıçta gizli
+            scene.add(sprite);
+            return sprite;
         }
 
         function resetSimulation() {
             isMerged = false;
-            oxygen.position.set(0, -5, 0);
-            h1.position.set(-8, 0, 0);
-            h2.position.set(8, 0, 0);
+            oxygen.position.set(0, -6, 0);
+            h1.position.set(-10, 0, 0);
+            h2.position.set(10, 0, 0);
+            
             bond1.visible = bond2.visible = false;
+            labelO.visible = labelH1.visible = labelH2.visible = false;
+            scene.rotation.y = 0;
         }
 
         function animate() {
             requestAnimationFrame(animate);
 
             if (!isMerged) {
-                oxygen.position.lerp(new THREE.Vector3(0, 0.5, 0), 0.03);
+                // Hareketler
+                oxygen.position.lerp(new THREE.Vector3(0, 1, 0), 0.03);
                 
-                const h1Target = new THREE.Vector3(Math.sin(targetAngle/2) * -bondLength, 0.5 - Math.cos(targetAngle/2) * bondLength, 0);
-                const h2Target = new THREE.Vector3(Math.sin(targetAngle/2) * bondLength, 0.5 - Math.cos(targetAngle/2) * bondLength, 0);
+                const h1Target = new THREE.Vector3(Math.sin(targetAngle / 2) * -bondLength, 1 - Math.cos(targetAngle / 2) * bondLength, 0);
+                const h2Target = new THREE.Vector3(Math.sin(targetAngle / 2) * bondLength, 1 - Math.cos(targetAngle / 2) * bondLength, 0);
 
                 h1.position.lerp(h1Target, 0.04);
                 h2.position.lerp(h2Target, 0.04);
 
+                // Birleşme kontrolü ve etiketlerin belirmesi
                 if (h1.position.distanceTo(h1Target) < 0.05) {
                     isMerged = true;
                     bond1.visible = bond2.visible = true;
+                    labelO.visible = labelH1.visible = labelH2.visible = true;
+                    updateBonds();
                 }
             } else {
-                scene.rotation.y += 0.01;
+                scene.rotation.y += 0.005;
             }
 
-            if (isMerged) {
-                updateBond(bond1, oxygen.position, h1.position);
-                updateBond(bond2, oxygen.position, h2.position);
-            }
+            // Etiketleri atomların üzerine sabitle
+            labelO.position.set(oxygen.position.x, oxygen.position.y + 1.2, oxygen.position.z);
+            labelH1.position.set(h1.position.x, h1.position.y - 0.8, h1.position.z);
+            labelH2.position.set(h2.position.x, h2.position.y - 0.8, h2.position.z);
 
             renderer.render(scene, camera);
-            labelRenderer.render(scene, camera); // Harfleri çizen renderer
         }
 
-        function updateBond(bond, p1, p2) {
+        function updateBonds() {
+            alignBond(bond1, oxygen.position, h1.position);
+            alignBond(bond2, oxygen.position, h2.position);
+        }
+
+        function alignBond(bond, p1, p2) {
             const dir = new THREE.Vector3().subVectors(p2, p1);
             bond.position.copy(p1).add(dir.clone().multiplyScalar(0.5));
             bond.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
@@ -148,7 +154,6 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            labelRenderer.setSize(window.innerWidth, window.innerHeight);
         });
     </script>
 </body>
