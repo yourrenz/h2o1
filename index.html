@@ -1,128 +1,124 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <meta charset="utf-8">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-
-    <title>H2O AR Projesi</title>
-    
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
-    
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>H2O Sentezi 3D Model</title>
     <style>
-      body { margin: 0; overflow: hidden; height: 100vh; background-color: #000; }
-      .mindar-ui-overlay { display: none !important; }
-
-      #click-screen {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background-color: darkblue; color: white; display: flex;
-        align-items: center; justify-content: center; z-index: 10000; 
-        font-family: sans-serif; cursor: pointer; transition: opacity 0.5s; 
-      }
-      #click-screen h1 {
-        border: 4px solid white; padding: 20px 40px; border-radius: 20px;
-        text-align: center; font-size: 24px;
-      }
-
-      #scanning-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        display: none; align-items: center; justify-content: center;
-        z-index: 999; pointer-events: none; 
-      }
-      .scanner-frame {
-        width: 70vw; height: 70vw; max-width: 300px; max-height: 300px;
-        border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 20px;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); position: relative;
-      }
-      .scanner-frame::before {
-        content: ""; position: absolute; top: -5px; left: -5px; width: 40px; height: 40px;
-        border-top: 5px solid #00fff2; border-left: 5px solid #00fff2;
-      }
-      .scanner-frame::after {
-        content: ""; position: absolute; bottom: -5px; right: -5px; width: 40px; height: 40px;
-        border-bottom: 5px solid #00fff2; border-right: 5px solid #00fff2;
-      }
-      .scanner-line {
-        position: absolute; width: 100%; height: 2px;
-        background: #00fff2; opacity: 0.7; box-shadow: 0 0 10px #00fff2;
-        animation: scan 2s linear infinite;
-      }
-      @keyframes scan {
-        0% { top: 0; }
-        100% { top: 100%; }
-      }
+        body {
+            margin: 0;
+            overflow: hidden; /* Kaydırma çubuklarını gizler */
+            background-color: #0a0a1a; /* Derin ve koyu bir arka plan */
+        }
+        canvas {
+            display: block;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+            opacity: 0.8;
+        }
     </style>
+</head>
+<body>
+    <div id="info">H2O Sentezi: Moleküller Birleşiyor...</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-      AFRAME.registerComponent('ar-handler', {
-        init: function () {
-          const scanner = document.querySelector('#scanning-overlay');
-          
-          this.el.addEventListener('targetFound', () => {
-            scanner.style.display = 'none';
-          });
-          
-          this.el.addEventListener('targetLost', () => {
-            scanner.style.display = 'flex';
-          });
+        // 1. Sahne, Kamera ve Render Ayarları (Kural 1 & 2: Stabil ve Uyumluluk)
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio); // Mobil cihazlar için netlik ayarı
+        document.body.appendChild(renderer.domElement);
+
+        // Işıklandırma
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 0.8);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        // 2. Atomların Oluşturulması (Kimya felsefesi)
+        // Oksijen (Kırmızı, daha büyük)
+        const oxygenGeometry = new THREE.SphereGeometry(1, 32, 32);
+        const oxygenMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+        const oxygen = new THREE.Mesh(oxygenGeometry, oxygenMaterial);
+        
+        // Hidrojenler (Beyaz, daha küçük)
+        const hydrogenGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+        const hydrogenMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        
+        const hydrogen1 = new THREE.Mesh(hydrogenGeometry, hydrogenMaterial);
+        const hydrogen2 = new THREE.Mesh(hydrogenGeometry, hydrogenMaterial);
+
+        // Atomların başlangıç pozisyonları (Ayrı noktalardan havaya yükselecekler)
+        oxygen.position.set(-3, -5, -2);
+        hydrogen1.position.set(3, -6, 2);
+        hydrogen2.position.set(0, -7, 3);
+
+        scene.add(oxygen);
+        scene.add(hydrogen1);
+        scene.add(hydrogen2);
+
+        // Su Damlası (Birleşme sonrası ortaya çıkacak, başlangıçta gizli)
+        const waterGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+        const waterMaterial = new THREE.MeshStandardMaterial({ color: 0x00aaff, transparent: true, opacity: 0.8 });
+        const waterDrop = new THREE.Mesh(waterGeometry, waterMaterial);
+        waterDrop.position.set(0, 0, 0);
+        waterDrop.visible = false;
+        scene.add(waterDrop);
+
+        camera.position.z = 8;
+
+        // 3. Animasyon Döngüsü (Kural 4: Havaya yükselme ve birleşme hissi)
+        let isMerged = false;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!isMerged) {
+                // Yavaşça yukarı (Y ekseni) ve merkeze (0,0,0) doğru hareket
+                oxygen.position.lerp(new THREE.Vector3(0, 0, 0), 0.01);
+                hydrogen1.position.lerp(new THREE.Vector3(0, 0, 0), 0.015);
+                hydrogen2.position.lerp(new THREE.Vector3(0, 0, 0), 0.012);
+
+                // Birleşme noktasına (merkeze) olan mesafeyi kontrol et
+                if (oxygen.position.distanceTo(new THREE.Vector3(0,0,0)) < 0.2) {
+                    isMerged = true;
+                    // Atomları gizle, suyu göster
+                    oxygen.visible = false;
+                    hydrogen1.visible = false;
+                    hydrogen2.visible = false;
+                    
+                    waterDrop.visible = true;
+                    document.getElementById('info').innerText = "Su (H2O) Başarıyla Oluştu!";
+                }
+            } else {
+                // Su oluştuktan sonra hafifçe dalgalanma/dönme efekti
+                waterDrop.rotation.y += 0.01;
+                waterDrop.position.y = Math.sin(Date.now() * 0.002) * 0.5; // Yukarı aşağı süzülme
+            }
+
+            renderer.render(scene, camera);
         }
-      });
 
-      document.addEventListener("DOMContentLoaded", function() {
-        const clickScreen = document.querySelector('#click-screen');
-        const scanner = document.querySelector('#scanning-overlay');
+        animate();
 
-        clickScreen.addEventListener('click', function() {
-          clickScreen.style.opacity = '0';
-          setTimeout(() => { 
-            clickScreen.style.display = 'none'; 
-            scanner.style.display = 'flex';
-          }, 500);
+        // Pencere boyutu değiştiğinde veya mobil cihaz yan çevrildiğinde kamerayı güncelle
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         });
-      });
     </script>
-  </head>
-  
-  <body>
-
-    <div id="click-screen">
-      <h1>BAŞLATMAK İÇİN <br> EKRANA DOKUN</h1>
-    </div>
-
-    <div id="scanning-overlay">
-      <div class="scanner-frame">
-        <div class="scanner-line"></div>
-      </div>
-    </div>
-
-    <a-scene 
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiScanning: no;" 
-      color-space="sRGB" 
-      renderer="colorManagement: true, physicallyCorrectLights" 
-      vr-mode-ui="enabled: false" 
-      device-orientation-permission-ui="enabled: false">
-      
-      <a-assets>
-        <a-asset-item id="h2oModel" src="./H2O.glb"></a-asset-item>
-      </a-assets>
-
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-      <a-entity mindar-image-target="targetIndex: 0" ar-handler>
-        <a-gltf-model 
-          src="#h2oModel" 
-          rotation="0 0 0" 
-          position="0 0 0" 
-          scale="0.5 0.5 0.5" 
-          animation-mixer>
-        </a-gltf-model>
-      </a-entity>
-      
-    </a-scene>
-
-  </body>
+</body>
 </html>
