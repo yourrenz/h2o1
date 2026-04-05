@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>H2O Sentezi: Kimya Arka Planlı</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #050510; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         canvas { display: block; }
         #ui {
             position: absolute; bottom: 30px; width: 100%; text-align: center;
@@ -35,7 +35,7 @@
         const bondLength = 1.6;
 
         // Arka Plan ve Efektler
-        let backgroundMesh;
+        let chemistryStickersMesh; // Yeni çıkartma katmanı
         let particlesSystem;
 
         init();
@@ -56,19 +56,34 @@
             scene.add(light);
             scene.add(new THREE.AmbientLight(0x606060));
 
-            // --- KİMYA ARKA PLANI (ÇIKARTMALAR) ---
+            // Arka Plan: Tamamen Siyah
+            scene.background = new THREE.Color(0x000000);
+
+            // --- YENİ BÖLÜM: KİMYA ÇIKARTMALARI (image_9.png Karalamaları) ---
             const textureLoader = new THREE.TextureLoader();
             
-            // DİKKAT: Buraya kendi kimya temalı arka plan görselinin yolunu koymalısın.
-            // Örnek: 'images/chemistry_stickers_bg.jpg'
-            // Stabilite için görsel boyutu optimize edilmiş (örn. 1920x1080) olmalıdır.
-            const bgTexture = textureLoader.load('https://threejs.org/examples/textures/uv_grid_opengl.jpg'); // Test dokusu
+            // DİKKAT: Buraya 'image_9.png' görselinden elde edilen, 
+            // şeffaf arka planlı, siyah karalamaları içeren görselin yolunu koymalısın.
+            // Örnek: 'images/kimya_karalamalari.png'
+            // Bu görsel, referanstaki mavi çizimlerin monokrom (siyah) versiyonu olmalı.
+            const stickersTexture = textureLoader.load('https://threejs.org/examples/textures/crate.gif'); // Test dokusu, burası değişecek
             
-            const bgGeometry = new THREE.PlaneGeometry(20, 15);
-            const bgMaterial = new THREE.MeshBasicMaterial({ map: bgTexture, side: THREE.DoubleSide, transparent: true, opacity: 0.2 });
-            backgroundMesh = new THREE.Mesh(bgGeometry, bgMaterial);
-            backgroundMesh.position.z = -5; // Molekülün arkasına yerleştir
-            scene.add(backgroundMesh);
+            const stickersGeometry = new THREE.PlaneGeometry(20, 15);
+            
+            // Materyal Ayarı: 'AdditiveBlending' ile siyah arka plan üzerinde ışıyacaklar.
+            // 'transparent: true' ve 'opacity' ile süzülme hissi vereceğiz.
+            const stickersMaterial = new THREE.MeshBasicMaterial({ 
+                map: stickersTexture, 
+                side: THREE.DoubleSide, 
+                transparent: true, 
+                opacity: 0.15, // Başlangıçta çok hafif
+                blending: THREE.AdditiveBlending // Siyah üzerinde parlama etkisi
+            });
+            
+            chemistryStickersMesh = new THREE.Mesh(stickersGeometry, stickersMaterial);
+            chemistryStickersMesh.position.z = -5; // Molekülün arkasına yerleştir
+            scene.add(chemistryStickersMesh);
+            // --------------------------------------------------
 
             // Atomlar
             oxygen = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
@@ -154,8 +169,9 @@
             labelO.visible = labelH1.visible = labelH2.visible = false;
             scene.rotation.y = 0;
 
-            // Parçacıkları gizle
+            // Efektleri gizle
             particlesSystem.material.opacity = 0;
+            chemistryStickersMesh.material.opacity = 0.15; // Çıkartmaların başlangıç opaklığı
         }
 
         function animate() {
@@ -188,6 +204,10 @@
                 particlesSystem.material.opacity = THREE.MathUtils.lerp(particlesSystem.material.opacity, 0.5, 0.01); // Maksimum 0.5 opaklık
                 particlesSystem.rotation.y += 0.001; // Yavaşça dön
                 particlesSystem.position.y = Math.sin(Date.now() * 0.001) * 0.2; // Hafif süzülme
+
+                // Kimya Çıkartmalarının süzülme animasyonu
+                chemistryStickersMesh.position.y = Math.cos(Date.now() * 0.0005) * 0.1; // Çok yavaş salınım
+                chemistryStickersMesh.material.opacity = THREE.MathUtils.lerp(chemistryStickersMesh.material.opacity, 0.25, 0.005); // Hafifçe opaklaş
             }
 
             // Etiketleri atomların üzerine sabitle
