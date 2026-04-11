@@ -3,56 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>H2O Sentezi: Odaklanmış Model</title>
+    <title>H2O Sentezi: Yavaş ve Kararlı Model</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #000; /* Arka planı tamamen siyah yaptık */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        canvas {
-            display: block;
-        }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        canvas { display: block; }
         #ui {
-            position: absolute;
-            bottom: 30px;
-            width: 100%;
-            text-align: center;
-            color: white;
-            pointer-events: none;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.5); /* Okunabilirlik için gölge */
+            position: absolute; bottom: 30px; width: 100%; text-align: center;
+            color: white; pointer-events: none;
         }
         button {
-            pointer-events: auto;
-            padding: 12px 25px;
-            cursor: pointer;
-            background: #1a73e8;
-            color: white;
-            border: none;
-            border-radius: 25px;
-            font-weight: bold;
-            transition: 0.3s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            pointer-events: auto; padding: 12px 25px; cursor: pointer;
+            background: #1a73e8; color: white; border: none; border-radius: 25px;
+            font-weight: bold; transition: 0.3s;
         }
-        button:hover {
-            background: #1557b0;
-            transform: scale(1.05);
-        }
+        button:hover { background: #1557b0; transform: scale(1.05); }
     </style>
 </head>
 <body>
 
     <div id="ui">
-        <button onclick="resetSimulation()">Sentezi Yeniden Başlat</button>
+        <button onclick="resetSimulation()">Sentezi Başlat / Sıfırla</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
         let scene, camera, renderer, oxygen, h1, h2, bond1, bond2;
+        let labelO, labelH1, labelH2;
         let isMerged = false;
-        const targetAngle = (104.5 * Math.PI) / 180; // Su molekülünün bağ açısı
+        const targetAngle = (104.5 * Math.PI) / 180;
         const bondLength = 1.6;
 
         init();
@@ -68,45 +47,59 @@
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // Işıklandırma (Dramatik bir etki için)
             const light = new THREE.PointLight(0xffffff, 1.5, 100);
             light.position.set(10, 10, 10);
             scene.add(light);
-            scene.add(new THREE.AmbientLight(0x404040)); // Ortam ışığını biraz azalttık
+            scene.add(new THREE.AmbientLight(0x404040));
 
             // Atomlar
-            // Oksijen
-            const oGeo = new THREE.SphereGeometry(0.8, 32, 32);
-            const oMat = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.3 });
-            oxygen = new THREE.Mesh(oGeo, oMat);
-            scene.add(oxygen);
+            oxygen = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+            h1 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            h2 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            scene.add(oxygen, h1, h2);
 
-            // Hidrojenler
-            const hGeo = new THREE.SphereGeometry(0.45, 32, 32);
-            const hMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-            h1 = new THREE.Mesh(hGeo, hMat);
-            h2 = new THREE.Mesh(hGeo, hMat);
-            scene.add(h1, h2);
-
-            // Bağlar (Başlangıçta gizli)
+            // Bağlar
             const bondGeo = new THREE.CylinderGeometry(0.1, 0.1, bondLength, 12);
-            const bondMat = new THREE.MeshStandardMaterial({ color: 0xdddddd });
+            const bondMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
             bond1 = new THREE.Mesh(bondGeo, bondMat);
             bond2 = new THREE.Mesh(bondGeo, bondMat);
             bond1.visible = bond2.visible = false;
             scene.add(bond1, bond2);
 
+            // Etiketleri (Harfleri) Oluştur
+            labelO = createTextLabel("O", "#ffffff");
+            labelH1 = createTextLabel("H", "#000000");
+            labelH2 = createTextLabel("H", "#000000");
+            
             resetSimulation();
+        }
+
+        function createTextLabel(text, color) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 128; canvas.height = 128;
+            ctx.fillStyle = color;
+            ctx.font = "Bold 80px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(text, 64, 64);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMat = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.scale.set(1.2, 1.2, 1);
+            sprite.visible = false;
+            scene.add(sprite);
+            return sprite;
         }
 
         function resetSimulation() {
             isMerged = false;
-            // Başlangıç pozisyonları
             oxygen.position.set(0, -6, 0);
             h1.position.set(-10, 0, 0);
             h2.position.set(10, 0, 0);
-            
             bond1.visible = bond2.visible = false;
+            labelO.visible = labelH1.visible = labelH2.visible = false;
             scene.rotation.y = 0;
         }
 
@@ -114,36 +107,31 @@
             requestAnimationFrame(animate);
 
             if (!isMerged) {
-                // Süzülme ve Birleşme Hareketleri
-                oxygen.position.lerp(new THREE.Vector3(0, 1, 0), 0.03);
+                // HIZ DEĞİŞİMİ: 0.03 yerine 0.005 yapıldı (Oksijenin yükselme hızı)
+                oxygen.position.lerp(new THREE.Vector3(0, 1, 0), 0.005);
                 
-                // Hidrojenlerin hedef pozisyonları (104.5 dereceye göre)
-                const h1Target = new THREE.Vector3(
-                    Math.sin(targetAngle / 2) * -bondLength,
-                    1 - Math.cos(targetAngle / 2) * bondLength,
-                    0
-                );
-                const h2Target = new THREE.Vector3(
-                    Math.sin(targetAngle / 2) * bondLength,
-                    1 - Math.cos(targetAngle / 2) * bondLength,
-                    0
-                );
+                const h1Target = new THREE.Vector3(Math.sin(targetAngle/2) * -bondLength, 1 - Math.cos(targetAngle/2) * bondLength, 0);
+                const h2Target = new THREE.Vector3(Math.sin(targetAngle/2) * bondLength, 1 - Math.cos(targetAngle/2) * bondLength, 0);
+                
+                // HIZ DEĞİŞİMİ: 0.04 yerine 0.008 yapıldı (Hidrojenlerin merkeze gelme hızı)
+                h1.position.lerp(h1Target, 0.008);
+                h2.position.lerp(h2Target, 0.008);
 
-                h1.position.lerp(h1Target, 0.04);
-                h2.position.lerp(h2Target, 0.04);
-
-                // Birleşme kontrolü (Mesafe bazlı)
                 if (h1.position.distanceTo(h1Target) < 0.05) {
                     isMerged = true;
-                    // Bağları göster
                     bond1.visible = bond2.visible = true;
-                    updateBonds();
+                    labelO.visible = labelH1.visible = labelH2.visible = true;
                 }
             } else {
-                // Kararlı haldeyken yavaşça dönme
                 scene.rotation.y += 0.005;
             }
 
+            // Etiketleri her zaman atomların merkezinde tut
+            labelO.position.copy(oxygen.position);
+            labelH1.position.copy(h1.position);
+            labelH2.position.copy(h2.position);
+
+            if(isMerged) updateBonds();
             renderer.render(scene, camera);
         }
 
